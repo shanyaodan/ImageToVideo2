@@ -237,6 +237,7 @@ public final class EglCore {
         if (!EGL14.eglGetConfigAttrib(mEGLDisplay, mEGLConfig, EGL14.EGL_NATIVE_VISUAL_ID, format, 0)) {
             checkEglError("EGL getConfig attrib failed ");
         }
+
         // Create a window surface, and attach it to the Surface we received.
         int[] surfaceAttribs = {
                 EGL14.EGL_NONE

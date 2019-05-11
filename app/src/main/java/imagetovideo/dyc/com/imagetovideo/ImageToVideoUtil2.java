@@ -22,6 +22,8 @@ public class ImageToVideoUtil2 {
     MediaCodec.BufferInfo mBufferInfo=null;
     private int mVideoTrackIndex;
     EglSurfaceBase eglSurfaceBase;
+    EglEnv eglEnv;
+    EncodeProgram2 encodeProgram2;
     public void init(int width, int height){
         mBufferInfo = new MediaCodec.BufferInfo();
         try {
@@ -36,13 +38,18 @@ public class ImageToVideoUtil2 {
         mediaFormat.setInteger(MediaFormat.KEY_BIT_RATE, width * height);
         mediaFormat.setInteger(MediaFormat.KEY_FRAME_RATE, 16);
         mediaFormat.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 10);
-
         mediaCodec.configure(mediaFormat, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE);
         Surface surface= mediaCodec.createInputSurface();
         mediaCodec.start();
-        EglCore eglCore =  new EglCore();
-        eglSurfaceBase = new EglSurfaceBase(eglCore);
-        eglSurfaceBase.createWindowSurface(surface,width,height);
+//        EglCore eglCore =  new EglCore();
+//        eglSurfaceBase = new EglSurfaceBase(eglCore);
+//        eglSurfaceBase.createWindowSurface(surface,width,height);
+//        eglSurfaceBase.makeCurrent();
+         eglEnv = new EglEnv(width,height);
+        eglEnv.setUpEnv();
+        eglEnv.buildWindowSurface(surface);
+         encodeProgram2 = new EncodeProgram2(new int[]{width,height});
+        encodeProgram2.build();
     }
     public int getColorFormat(){
         int colorFormat = 0;
@@ -109,35 +116,42 @@ public class ImageToVideoUtil2 {
      * not recording audio.
      */
     public void drainEncoder(boolean endOfStream) {
+
         final int TIMEOUT_USEC = 10000;
         L.i(TAG, "drainEncoder(" + endOfStream + ")");
 
         if (endOfStream) {
-//            if (VERBOSE) L.i(TAG, "sending EOS to encoder");
+            L.i(TAG, "sending EOS to encoder");
             mediaCodec.signalEndOfInputStream();
         }
 
         ByteBuffer[] encoderOutputBuffers = mediaCodec.getOutputBuffers();
         while (true) {
             int encoderStatus = mediaCodec.dequeueOutputBuffer(mBufferInfo, TIMEOUT_USEC);
+
+
             if (encoderStatus == MediaCodec.INFO_TRY_AGAIN_LATER) {
+                L.i(TAG, "encoderStatus == MediaCodec MediaCodec.INFO_TRY_AGAIN_LATER: ");
                 // no output available yet
                 if (!endOfStream) {
+                    L.i(TAG, "no output available, break not end");
                     break;      // out of while
                 } else {
                      L.i(TAG, "no output available, spinning to await EOS");
+//                     break;
                 }
             } else if (encoderStatus == MediaCodec.INFO_OUTPUT_BUFFERS_CHANGED) {
                 // not expected for an encoder\
                 L.i(TAG, "encoderStatus == MediaCodec INFO_OUTPUT_BUFFERS_CHANGED: 获取数据");
                 encoderOutputBuffers = mediaCodec.getOutputBuffers();
             } else if (encoderStatus == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
+                L.i(TAG, "encoderStatus == MediaCodec MediaCodec.INFO_OUTPUT_FORMAT_CHANGED: ");
                 // should happen before receiving buffers, and should only happen once
 //                synchronized (lock) {
-//                    if (mMuxerStarted) {
-//                        throw new RuntimeException("format changed twice");
-//                    }
-                    if(!mMuxerStarted) {
+                    if (mMuxerStarted) {
+                        throw new RuntimeException("format changed twice");
+                    }
+//                    if(!mMuxerStarted) {
                         MediaFormat newFormat = mediaCodec.getOutputFormat();
                         L.i(TAG, "encoder output format changed: " + newFormat);
 
@@ -147,34 +161,31 @@ public class ImageToVideoUtil2 {
                             mediaMuxer.start();
                             mMuxerStarted = true;
                         }
-                    }
+//                    }
 //                }
             } else if (encoderStatus < 0) {
-                L.i(TAG, "unexpected result from encoder.dequeueOutputBuffer: " +
+                L.i(TAG, "unexpected result from encoder.dequeueOutputBuffer: encoderStatus < 0" +
                         encoderStatus);
                 // let's ignore it
             } else {
+                Log.d(TAG, "encoderStatus > 0");
                 ByteBuffer encodedData = encoderOutputBuffers[encoderStatus];
                 if (encodedData == null) {
-                    throw new RuntimeException("encoderOutputBuffer " + encoderStatus +
-                            " was null");
+                    throw new RuntimeException("encoderOutputBuffer " + encoderStatus + " was null");
                 }
-
                 if ((mBufferInfo.flags & MediaCodec.BUFFER_FLAG_CODEC_CONFIG) != 0) {
                     // The codec config data was pulled out and fed to the muxer when we got
                     // the INFO_OUTPUT_FORMAT_CHANGED status.  Ignore it.
                     Log.d(TAG, "ignoring BUFFER_FLAG_CODEC_CONFIG");
                     mBufferInfo.size = 0;
                 }
-
                 if (mBufferInfo.size != 0) {
-//                    if (!mMuxerStarted) {
-//                        throw new RuntimeException("muxer hasn't started");
-//                    }
-
+                    if (!mMuxerStarted) {
+                        throw new RuntimeException("muxer hasn't started");
+                    }
                     // adjust the ByteBuffer values to match BufferInfo (not needed?)
-//                    encodedData.position(mBufferInfo.offset);
-//                    encodedData.limit(mBufferInfo.offset + mBufferInfo.size);
+                    encodedData.position(mBufferInfo.offset);
+                    encodedData.limit(mBufferInfo.offset + mBufferInfo.size);
                     if (mMuxerStarted) {
                         mediaMuxer.writeSampleData(mVideoTrackIndex, encodedData, mBufferInfo);
                             L.i(TAG, "sent " + mBufferInfo.size + " bytes to muxer, ts=" +
@@ -182,8 +193,8 @@ public class ImageToVideoUtil2 {
                     }
                 }
                 mediaCodec.releaseOutputBuffer(encoderStatus, false);
-
                 if ((mBufferInfo.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) {
+                    L.i(TAG, "BUFFER_FLAG_END_OF_STREAM");
                     if (!endOfStream) {
                         L.i(TAG, "reached end of stream unexpectedly");
                     } else {
@@ -195,14 +206,18 @@ public class ImageToVideoUtil2 {
         }
     }
 
-    public void drawframe(Bitmap bitmap){
-        eglSurfaceBase.drawFrame(bitmap,1000000000L);
+    public void drawframe(Bitmap bitmap,int num){
+//        eglSurfaceBase.drawFrame(bitmap,1000000*1000L*num);
+        encodeProgram2.renderBitmap(bitmap);
+        eglEnv.setPresentationTime(1000000/16*1000L*num);
+        eglEnv.swapBuffers();
         drainEncoder(false);
     }
 
     public void  drainEnd() {
        drainEncoder(true);
-        eglSurfaceBase.releaseEglSurface();
+//        eglSurfaceBase.releaseEglSurface();
+        eglEnv.relase();
         mediaCodec.stop();
         mediaCodec.release();
         mediaMuxer.stop();

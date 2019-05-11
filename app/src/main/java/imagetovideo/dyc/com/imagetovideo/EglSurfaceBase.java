@@ -44,18 +44,20 @@ public class EglSurfaceBase {
      * <p>
      * @param surface May be a Surface or SurfaceTexture.
      */
+    private int w,h;
+
     public void createWindowSurface(Object surface,int w,int h) {
         if (mEGLSurface != EGL14.EGL_NO_SURFACE) {
             throw new IllegalStateException("surface already created");
         }
         mEGLSurface = mEglCore.createWindowSurface(surface);
-
+        this.w=w;
+        this.h = h;
         // Don't cache width/height here, because the size of the underlying surface can change
         // out from under us (see e.g. HardwareScalerActivity).
         //mWidth = mEglCore.querySurface(mEGLSurface, EGL14.EGL_WIDTH);
         //mHeight = mEglCore.querySurface(mEGLSurface, EGL14.EGL_HEIGHT);
-         encodeProgram2 = new EncodeProgram2(new int[]{w,h});
-        encodeProgram2.build();
+
     }
 
     /**
@@ -146,6 +148,8 @@ public class EglSurfaceBase {
         boolean result = mEglCore.swapBuffers(mEGLSurface);
         if (!result) {
             Log.d(TAG, "WARNING: swapBuffers() failed");
+        }else {
+            Log.d(TAG, "WARNING: swapBuffers() success");
         }
         return result;
     }
@@ -160,11 +164,13 @@ public class EglSurfaceBase {
     }
 
     public void drawFrame(Bitmap bitmap,long presentTime) {
-
+        if(null==encodeProgram2){
+            encodeProgram2 = new EncodeProgram2(new int[]{w,h});
+            encodeProgram2.build();
+        }
         encodeProgram2.renderBitmap(bitmap);
         // 给渲染的这一帧设置一个时间戳
         setPresentationTime(presentTime);
         swapBuffers();
-
     }
 }
