@@ -25,13 +25,27 @@ public class MainActivity extends AppCompatActivity {
 //                  imageToVideoUtil.init(320,480);
 //                  imageToVideoUtil.encode(Bitmap.createScaledBitmap(BitmapFactory.decodeResource(getResources(),R.drawable.bg_title_red_bg),320,480,false),3);
 //                  imageToVideoUtil.finish();
+            new Thread(){
+                @Override
+                public void run() {
+                    super.run();
                     final ImageToVideoUtil2 imageToVideoUtil2 = new ImageToVideoUtil2();
                     imageToVideoUtil2.init(320,480);
                     for(int i=0;i<16*3;i++) {
                         imageToVideoUtil2.drawframe(Bitmap.createScaledBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.bg_title_red_bg), 320, 480, false), i);
                     }
-            imageToVideoUtil2.drainEnd();
-                    Toast.makeText(getApplicationContext(),"编码完成",Toast.LENGTH_LONG).show();
+                    imageToVideoUtil2.drainEnd();
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            Toast.makeText(getApplicationContext(),"编码完成",Toast.LENGTH_LONG).show();
+                        }
+                    });
+
+                }
+            }.start();
+
+
         }
     }
 }
