@@ -41,15 +41,15 @@ public class ImageToVideoUtil2 {
         mediaCodec.configure(mediaFormat, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE);
         Surface surface= mediaCodec.createInputSurface();
         mediaCodec.start();
-//        EglCore eglCore =  new EglCore();
-//        eglSurfaceBase = new EglSurfaceBase(eglCore);
-//        eglSurfaceBase.createWindowSurface(surface,width,height);
-//        eglSurfaceBase.makeCurrent();
-         eglEnv = new EglEnv(width,height);
-        eglEnv.setUpEnv();
-        eglEnv.buildWindowSurface(surface);
-         encodeProgram2 = new EncodeProgram2(new int[]{width,height});
-        encodeProgram2.build();
+        EglCore eglCore =  new EglCore();
+        eglSurfaceBase = new EglSurfaceBase(eglCore);
+        eglSurfaceBase.createWindowSurface(surface,width,height);
+        eglSurfaceBase.makeCurrent();
+//         eglEnv = new EglEnv(width,height);
+//        eglEnv.setUpEnv();
+//        eglEnv.buildWindowSurface(surface);
+//         encodeProgram2 = new EncodeProgram2(new int[]{width,height});
+//        encodeProgram2.build();
     }
     public int getColorFormat(){
         int colorFormat = 0;
@@ -207,17 +207,17 @@ public class ImageToVideoUtil2 {
     }
 
     public void drawframe(Bitmap bitmap,int num){
-//        eglSurfaceBase.drawFrame(bitmap,1000000*1000L*num);
-        encodeProgram2.renderBitmap(bitmap);
-        eglEnv.setPresentationTime(1000000/16*1000L*num);
-        eglEnv.swapBuffers();
+        eglSurfaceBase.drawFrame(bitmap,1000000/16*1000L*num);
+//        encodeProgram2.renderBitmap(bitmap);
+//        eglEnv.setPresentationTime(1000000/16*1000L*num);
+//        eglEnv.swapBuffers();
         drainEncoder(false);
     }
 
     public void  drainEnd() {
        drainEncoder(true);
-//        eglSurfaceBase.releaseEglSurface();
-        eglEnv.relase();
+        eglSurfaceBase.releaseEglSurface();
+//        eglEnv.relase();
         mediaCodec.stop();
         mediaCodec.release();
         mediaMuxer.stop();

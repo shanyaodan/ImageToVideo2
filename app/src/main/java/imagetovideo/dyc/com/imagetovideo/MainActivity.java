@@ -41,7 +41,6 @@ public class MainActivity extends AppCompatActivity {
                             Toast.makeText(getApplicationContext(),"编码完成",Toast.LENGTH_LONG).show();
                         }
                     });
-
                 }
             }.start();
 

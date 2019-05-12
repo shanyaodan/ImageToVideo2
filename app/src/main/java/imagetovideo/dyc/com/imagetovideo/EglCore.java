@@ -16,7 +16,6 @@
 
 package imagetovideo.dyc.com.imagetovideo;
 
-import android.annotation.TargetApi;
 import android.graphics.SurfaceTexture;
 import android.opengl.EGL14;
 import android.opengl.EGLConfig;
@@ -24,7 +23,6 @@ import android.opengl.EGLContext;
 import android.opengl.EGLDisplay;
 import android.opengl.EGLExt;
 import android.opengl.EGLSurface;
-import android.os.Build;
 import android.util.Log;
 import android.view.Surface;
 
@@ -73,7 +71,6 @@ public final class EglCore {
      * @param sharedContext The context to share, or null if sharing is not desired.
      * @param flags Configuration bit flags, e.g. FLAG_RECORDABLE.
      */
-    @TargetApi(Build.VERSION_CODES.JELLY_BEAN_MR1)
     public EglCore(EGLContext sharedContext, int flags) {
         if (mEGLDisplay != EGL14.EGL_NO_DISPLAY) {
             throw new RuntimeException("EGL already set up");
@@ -120,7 +117,8 @@ public final class EglCore {
                 throw new RuntimeException("Unable to find a suitable EGLConfig");
             }
             int[] attrib2_list = {
-                    EGL14.EGL_CONTEXT_CLIENT_VERSION, 2, EGL14.EGL_NONE
+                    EGL14.EGL_CONTEXT_CLIENT_VERSION, 2,
+                    EGL14.EGL_NONE
             };
             EGLContext context = EGL14.eglCreateContext(mEGLDisplay, config, sharedContext,
                     attrib2_list, 0);
@@ -153,21 +151,20 @@ public final class EglCore {
         // doesn't really help.  It can also lead to a huge performance hit on glReadPixels()
         // when reading into a GL_RGBA buffer.
         int[] attribList = {
-                EGL14.EGL_BUFFER_SIZE, 32,
-                EGL14.EGL_ALPHA_SIZE, 8,
-                EGL14.EGL_BLUE_SIZE, 8,
-                EGL14.EGL_GREEN_SIZE, 8,
                 EGL14.EGL_RED_SIZE, 8,
-                EGL14.EGL_RENDERABLE_TYPE,
-                EGL14.EGL_OPENGL_ES2_BIT,
-                EGL14.EGL_SURFACE_TYPE,
-                EGL14.EGL_WINDOW_BIT,
+                EGL14.EGL_GREEN_SIZE, 8,
+                EGL14.EGL_BLUE_SIZE, 8,
+                EGL14.EGL_ALPHA_SIZE, 8,
+                //EGL14.EGL_DEPTH_SIZE, 16,
+                //EGL14.EGL_STENCIL_SIZE, 8,
+                EGL14.EGL_RENDERABLE_TYPE, renderableType,
+                EGL14.EGL_NONE, 0,      // placeholder for recordable [@-3]
                 EGL14.EGL_NONE
         };
-//        if ((flags & FLAG_RECORDABLE) != 0) {
-//            attribList[attribList.length - 3] = EGL_RECORDABLE_ANDROID;
-//            attribList[attribList.length - 2] = 1;
-//        }
+        if ((flags & FLAG_RECORDABLE) != 0) {
+            attribList[attribList.length - 3] = EGL_RECORDABLE_ANDROID;
+            attribList[attribList.length - 2] = 1;
+        }
         EGLConfig[] configs = new EGLConfig[1];
         int[] numConfigs = new int[1];
         if (!EGL14.eglChooseConfig(mEGLDisplay, attribList, 0, configs, 0, configs.length,
@@ -232,10 +229,6 @@ public final class EglCore {
     public EGLSurface createWindowSurface(Object surface) {
         if (!(surface instanceof Surface) && !(surface instanceof SurfaceTexture)) {
             throw new RuntimeException("invalid surface: " + surface);
-        }
-        int[] format  =new int[1];
-        if (!EGL14.eglGetConfigAttrib(mEGLDisplay, mEGLConfig, EGL14.EGL_NATIVE_VISUAL_ID, format, 0)) {
-            checkEglError("EGL getConfig attrib failed ");
         }
 
         // Create a window surface, and attach it to the Surface we received.
@@ -376,11 +369,4 @@ public final class EglCore {
             throw new RuntimeException(msg + ": EGL error: 0x" + Integer.toHexString(error));
         }
     }
-
-    public void buildEGLSurface(){
-
-
-
-    }
-
 }
