@@ -307,6 +307,10 @@ public class VideoClipper {
                     }
                     if (endOfStream)                {
                         int encodeInputIndex = encoder.dequeueInputBuffer(TIMEOUT_USEC);
+                        while (encodeInputIndex==-1){
+                            encodeInputIndex = encoder.dequeueInputBuffer(0);
+                            System.out.println("encoderInputBuffers等等");
+                        }
                         encoder.queueInputBuffer(encodeInputIndex, 0, 0, 0, MediaCodec.BUFFER_FLAG_END_OF_STREAM);
                         System.out.println("videoCliper audio encodeInput end");
                         decodeDone = true;
@@ -393,6 +397,7 @@ public class VideoClipper {
                     long dur = extractor.getSampleTime() - firstSampleTime - startPosition;
                     if ((dur < duration) && readSampleData > 0) {
                         decoder.queueInputBuffer(inputIndex, 0, readSampleData, extractor.getSampleTime(), 0);
+
                         decodeinput++;
                         System.out.println("videoCliper video decodeinput" + decodeinput + " dataSize" + readSampleData + " sampeTime" + extractor.getSampleTime());
                         extractor.advance();
@@ -430,7 +435,22 @@ public class VideoClipper {
                         }
                     }
                     if (endOfStream) {
+                        ByteBuffer decoderOutputBuffer = decoderOutputBuffers[index];
                         int encodeInputIndex = encoder.dequeueInputBuffer(TIMEOUT_USEC);
+                        while (encodeInputIndex==-1){
+                            encodeInputIndex = encoder.dequeueInputBuffer(0);
+                            System.out.println("encoderInputBuffers等等");
+                        }
+                        try {
+                            ByteBuffer encoderInputBuffer = encoderInputBuffers[encodeInputIndex];
+                            encoderInputBuffer.clear();
+                            encoderInputBuffer.put(decoderOutputBuffer);
+                        }catch (Throwable t){
+                            t.printStackTrace();
+//                          encodeInputIndex = encoderInputBuffers.length-1;
+                            System.out.println("encoderInputBuffers"+encoderInputBuffers.length+"sssssINdex"+encodeInputIndex);
+                        }
+                        System.out.println("encoderInputBuffers"+encoderInputBuffers.length+"success"+encodeInputIndex);
                         encoder.queueInputBuffer(encodeInputIndex, 0, 0, 0, MediaCodec.BUFFER_FLAG_END_OF_STREAM);
                         decodeDone = true;
                     }
@@ -721,7 +741,8 @@ public class VideoClipper {
 //        if (inputSurface != null) {
 //            inputSurface.release();
 //        }
-
+        mVideoExtractor.release();
+        mAudioExtractor.release();
         mMediaMuxer.stop();
         mMediaMuxer.release();
 
@@ -735,8 +756,7 @@ public class VideoClipper {
         audioEncoder.stop();
         audioEncoder.release();
 
-        mVideoExtractor.release();
-        mAudioExtractor.release();
+
 
 
         released = true;
