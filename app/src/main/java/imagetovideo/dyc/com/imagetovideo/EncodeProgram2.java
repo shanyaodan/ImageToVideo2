@@ -74,7 +74,7 @@ public class EncodeProgram2 {
 
             GLUtils.texImage2D(GLES20.GL_TEXTURE_2D, 0, b, 0);
 //        GLES20.glGenerateMipmap(GLES20.GL_TEXTURE_2D)
-            b.recycle();
+//            b.recycle();
             GLES20.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, 0);
 
             GLES20.glClear(GL10.GL_COLOR_BUFFER_BIT);

@@ -207,6 +207,7 @@ public class ImageToVideoUtil2 {
     }
 
     public void drawframe(Bitmap bitmap,int num){
+
         eglSurfaceBase.drawFrame(bitmap,1000000/16*1000L*num);
 //        encodeProgram2.renderBitmap(bitmap);
 //        eglEnv.setPresentationTime(1000000/16*1000L*num);
